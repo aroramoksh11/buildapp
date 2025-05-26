@@ -1,10 +1,7 @@
-'use client'
-
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { useEffect } from 'react'
-import InstallPrompt from '@/components/InstallPrompt'
+import ClientLayout from './client-layout'
 
 // Configure Inter font with local fallback
 const inter = Inter({
@@ -44,21 +41,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(
-          (registration) => {
-            console.log('ServiceWorker registration successful');
-          },
-          (err) => {
-            console.log('ServiceWorker registration failed: ', err);
-          }
-        );
-      });
-    }
-  }, []);
-
   return (
     <html lang="en" className={inter.className}>
       <head>
@@ -70,8 +52,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="AutoDrive" />
       </head>
       <body className="min-h-screen bg-gray-50">
-        {children}
-        <InstallPrompt />
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   )

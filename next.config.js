@@ -48,9 +48,6 @@ const nextConfig = {
   images: {
     domains: ['tile.openstreetmap.org'],
     unoptimized: true
-  },
-  experimental: {
-    optimizeFonts: false // Disable font optimization during build
   }
 }
 
