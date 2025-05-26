@@ -7,24 +7,23 @@ const DEFAULT_MANIFEST = {
   name: "ISIKKO PWA",
   short_name: "ISIKKO",
   description: "ISIKKO Progressive Web App",
+  id: "isikko-pwa",
   start_url: "/",
   display: "standalone",
   background_color: "#ffffff",
   theme_color: "#ffffff",
+  orientation: "portrait",
   icons: [
-    {
-      src: "/icons/icon-192x192.png",
-      sizes: "192x192",
-      type: "image/png",
-      purpose: "any maskable"
-    },
     {
       src: "/icons/icon-512x512.png",
       sizes: "512x512",
       type: "image/png",
       purpose: "any maskable"
     }
-  ]
+  ],
+  scope: "/",
+  display_override: ["window-controls-overlay"],
+  prefer_related_applications: false
 };
 
 // Static assets to cache
@@ -32,7 +31,6 @@ const STATIC_ASSETS = [
   '/',
   '/offline.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/version.json'
 ];
