@@ -1,11 +1,43 @@
 'use client'
 
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { useEffect } from 'react'
 import InstallPrompt from '@/components/InstallPrompt'
 
-const inter = Inter({ subsets: ['latin'] })
+// Configure Inter font with local fallback
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: [
+    '-apple-system',
+    'BlinkMacSystemFont',
+    'Segoe UI',
+    'Roboto',
+    'Oxygen',
+    'Ubuntu',
+    'Cantarell',
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    'sans-serif'
+  ],
+  preload: false // Disable preloading to prevent build-time fetching
+})
+
+export const metadata: Metadata = {
+  title: 'AutoDrive - Self-Driving Car Simulator',
+  description: 'Experience the future of transportation with our self-driving car simulator PWA.',
+  manifest: '/manifest.json',
+  themeColor: '#ffffff',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'AutoDrive'
+  }
+}
 
 export default function RootLayout({
   children,
@@ -28,17 +60,16 @@ export default function RootLayout({
   }, []);
 
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="theme-color" content="#000000" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="AutoDrive" />
       </head>
-      <body className={inter.className}>
+      <body className="min-h-screen bg-gray-50">
         {children}
         <InstallPrompt />
       </body>

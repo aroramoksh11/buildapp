@@ -27,6 +27,17 @@ const withPWA = require('next-pwa')({
           maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
         }
       }
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.(?:gstatic|googleapis)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+        }
+      }
     }
   ]
 })
@@ -37,6 +48,9 @@ const nextConfig = {
   images: {
     domains: ['tile.openstreetmap.org'],
     unoptimized: true
+  },
+  experimental: {
+    optimizeFonts: false // Disable font optimization during build
   }
 }
 
