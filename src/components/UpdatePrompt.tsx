@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 
-export default function UpdatePrompt() {
+interface UpdatePromptProps {
+  onUpdate: () => Promise<void>;
+}
+
+export default function UpdatePrompt({ onUpdate }: UpdatePromptProps) {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateProgress, setUpdateProgress] = useState(0)
@@ -40,7 +44,7 @@ export default function UpdatePrompt() {
         if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
           console.log('✨ Update available:', event.data)
           setLastUpdateTime(event.data.data.timestamp)
-          handleAutomaticUpdate()
+          setShowUpdatePrompt(true)
         }
       })
 
@@ -60,8 +64,9 @@ export default function UpdatePrompt() {
           if (registration) {
             console.log('📱 Service worker found, updating...')
             await registration.update()
-            // Force show the prompt for testing
-            setShowUpdatePrompt(true)
+            if (registration.waiting) {
+              setShowUpdatePrompt(true)
+            }
           } else {
             console.log('❌ No service worker registration found')
           }
@@ -80,59 +85,36 @@ export default function UpdatePrompt() {
     }
   }, [])
 
-  const handleAutomaticUpdate = async () => {
-    // Save any important state to localStorage before update
-    const currentState = {
-      // Add any important state that needs to persist
-      lastUpdateCheck: new Date().toISOString(),
-      // Add other state as needed
-    }
-    localStorage.setItem('appState', JSON.stringify(currentState))
-
+  const handleUpdate = async () => {
     setIsUpdating(true)
     setUpdateProgress(0)
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration()
-      if (registration) {
-        // Start progress animation
-        const progressInterval = setInterval(() => {
-          setUpdateProgress((prev) => {
-            if (prev >= 100) {
-              clearInterval(progressInterval)
-              // Complete update after reaching 100%
-              setTimeout(() => {
-                setIsUpdating(false)
-                setShowUpdatePrompt(false)
-                // Reload the page to apply updates
-                window.location.reload()
-              }, 500)
-              return 100
-            }
-            return prev + 10
-          })
-        }, 200)
+      // Start progress animation
+      const progressInterval = setInterval(() => {
+        setUpdateProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(progressInterval)
+            return 100
+          }
+          return prev + 10
+        })
+      }, 200)
 
-        // Trigger the update
-        await registration.update()
-        navigator.serviceWorker.controller?.postMessage({ type: 'REFRESH_PAGE' })
-      }
+      // Call the onUpdate prop
+      await onUpdate()
+      
+      // Complete update after reaching 100%
+      setTimeout(() => {
+        setIsUpdating(false)
+        setShowUpdatePrompt(false)
+      }, 500)
     } catch (error) {
-      console.error('Error during automatic update:', error)
+      console.error('Error during update:', error)
       setIsUpdating(false)
       setUpdateProgress(0)
     }
   }
-
-  // Restore state after page reload
-  useEffect(() => {
-    const savedState = localStorage.getItem('appState')
-    if (savedState) {
-      const state = JSON.parse(savedState)
-      // Restore any saved state
-      console.log('Restored state:', state)
-    }
-  }, [])
 
   if (!showUpdatePrompt && !isUpdating) return null
 
@@ -204,7 +186,7 @@ export default function UpdatePrompt() {
               Later
             </button>
             <button
-              onClick={handleAutomaticUpdate}
+              onClick={handleUpdate}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 via-pink-600 to-purple-600 hover:from-pink-600 hover:via-pink-700 hover:to-purple-700 rounded-lg transition-colors shadow-sm"
             >
               Update Now
