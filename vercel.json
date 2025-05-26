@@ -4,49 +4,86 @@
     {
       "src": "package.json",
       "use": "@vercel/next"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/manifest.json",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Cache-Control": "public, max-age=0, must-revalidate",
-        "Content-Type": "application/manifest+json"
-      },
-      "continue": true
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        }
+      ]
     },
     {
-      "src": "/sw.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Cache-Control": "public, max-age=0, must-revalidate",
-        "Content-Type": "application/javascript",
-        "Service-Worker-Allowed": "/"
-      },
-      "continue": true
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
     },
     {
-      "src": "/workbox-.*\\.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Cache-Control": "public, max-age=0, must-revalidate",
-        "Content-Type": "application/javascript"
-      },
-      "continue": true
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
     },
     {
-      "handle": "filesystem"
+      "source": "/workbox-.*\\.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/manifest.json",
+      "destination": "/public/manifest.json"
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/sw.js",
+      "destination": "/public/sw.js"
+    },
+    {
+      "source": "/workbox-.*\\.js",
+      "destination": "/public/$1"
     }
   ]
 } 
