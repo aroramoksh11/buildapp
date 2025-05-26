@@ -27,11 +27,8 @@ export default function ClientLayout({
         if ('serviceWorker' in navigator) {
           console.log('🔄 Starting fresh service worker registration...');
           
-          // Add cache-busting query parameter
-          const swUrl = `/sw.js?v=${Date.now()}`;
-          
           // Register new service worker with explicit scope and type
-          const newRegistration = await navigator.serviceWorker.register(swUrl, {
+          const newRegistration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
             type: 'module',
             updateViaCache: 'none'
@@ -102,7 +99,10 @@ export default function ClientLayout({
       }
     };
 
-    registerServiceWorker();
+    // Add a small delay before initial registration to ensure the page is fully loaded
+    setTimeout(() => {
+      registerServiceWorker();
+    }, 1000);
 
     // Check if the app is installed
     const checkIfInstalled = () => {
