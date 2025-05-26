@@ -33,6 +33,8 @@
   "resolutions": {
     "glob": "^10.3.10",
     "globby": "^13.2.2",
-    "del": "^7.0.0"
+    "del": "^7.0.0",
+    "postcss": "^8.4.35",
+    "autoprefixer": "^10.4.17"
   }
 }
