@@ -9,7 +9,7 @@ export default function UpdatePrompt() {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      // Check for updates every hour
+      // Check for updates every 5 minutes
       const checkForUpdates = async () => {
         try {
           const registration = await navigator.serviceWorker.getRegistration()
@@ -24,8 +24,8 @@ export default function UpdatePrompt() {
       // Initial check
       checkForUpdates()
 
-      // Set up periodic checks
-      const interval = setInterval(checkForUpdates, 60 * 60 * 1000) // Check every hour
+      // Set up periodic checks every 5 minutes (300000 ms)
+      const interval = setInterval(checkForUpdates, 5 * 60 * 1000)
 
       // Listen for update events
       navigator.serviceWorker.addEventListener('controllerchange', () => {
