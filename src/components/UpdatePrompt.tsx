@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 
 export default function UpdatePrompt() {
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
+  // Set initial state to true for testing
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateProgress, setUpdateProgress] = useState(0)
 
@@ -14,7 +15,10 @@ export default function UpdatePrompt() {
         try {
           const registration = await navigator.serviceWorker.getRegistration()
           if (registration) {
+            console.log('Checking for updates...')
             await registration.update()
+            // Force show update prompt for testing
+            setShowUpdatePrompt(true)
           }
         } catch (error) {
           console.error('Error checking for updates:', error)
@@ -29,6 +33,7 @@ export default function UpdatePrompt() {
 
       // Listen for update events
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('Service worker updated, showing prompt')
         setShowUpdatePrompt(true)
       })
 
@@ -65,10 +70,8 @@ export default function UpdatePrompt() {
     }
   }
 
-  if (!showUpdatePrompt) return null
-
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-[9999]">
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-2xl p-4 max-w-sm w-full border border-gray-200">
         <div className="flex items-start justify-between">
           <div className="flex-1">
