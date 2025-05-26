@@ -3,37 +3,45 @@
 @tailwind utilities;
 
 :root {
-  --background-start: #1e40af;
-  --background-end: #3b82f6;
+  --background-start: #ffffff;
+  --background-end: #f8fafc;
 }
 
 body {
   background: linear-gradient(to bottom right, var(--background-start), var(--background-end));
   min-height: 100vh;
-  color: white;
+  color: #1e293b; /* slate-800 for better contrast */
 }
 
 /* Add smooth transition for background changes */
 body {
-  transition: background 0.5s ease-in-out;
+  transition: all 0.5s ease-in-out;
 }
 
-/* Ensure text is readable on the new background */
+/* Update text colors for better contrast on white */
 .text-gray-700 {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #334155 !important; /* slate-700 */
 }
 
 .text-gray-600 {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: #475569 !important; /* slate-600 */
 }
 
-/* Update card backgrounds to be semi-transparent */
+/* Update card backgrounds with subtle shadow */
 .bg-white {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(8px);
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  border: 1px solid #e2e8f0; /* slate-200 */
 }
 
 /* Update any existing background classes */
 .bg-gray-50 {
-  background-color: transparent !important;
+  background-color: #f8fafc !important; /* slate-50 */
+}
+
+/* Add subtle hover effects */
+.hover\:bg-white:hover {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  transition: all 0.2s ease-in-out;
 }
