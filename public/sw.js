@@ -1,67 +1,220 @@
-// Service Worker with Auto Update
-const CACHE_NAME = 'autodrive-cache-v2';
-const BG_COLOR_VERSION = 'blue-v1';
+const CACHE_NAME = 'isikko-cache-v5';
+const STATIC_CACHE = 'static-cache-v5';
+const DYNAMIC_CACHE = 'dynamic-cache-v5';
 
-// Install event
+// Default manifest to serve if the actual manifest.json is not accessible
+const DEFAULT_MANIFEST = {
+  name: "ISIKKO PWA",
+  short_name: "ISIKKO",
+  description: "ISIKKO Progressive Web App",
+  start_url: "/",
+  display: "standalone",
+  background_color: "#ffffff",
+  theme_color: "#ffffff",
+  icons: [
+    {
+      src: "/icons/icon-192x192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any maskable"
+    },
+    {
+      src: "/icons/icon-512x512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any maskable"
+    }
+  ]
+};
+
+// Static assets to cache
+const STATIC_ASSETS = [
+  '/',
+  '/offline.html',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/version.json'
+];
+
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('📦 Service worker installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('✅ Cache opened');
-      return cache.addAll([
-        '/',
-        '/manifest.json',
-        '/globals.css'
-      ]);
-    })
-  );
-});
+    (async () => {
+      try {
+        // Create caches
+        const staticCache = await caches.open(STATIC_CACHE);
+        const dynamicCache = await caches.open(DYNAMIC_CACHE);
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('🔄 Service worker activating...');
-  event.waitUntil(
-    Promise.all([
-      // Clean up old caches
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
-              console.log('🗑️ Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
+        // Cache static assets
+        console.log('📦 Caching static assets...');
+        await Promise.all(
+          STATIC_ASSETS.map(async (asset) => {
+            try {
+              const response = await fetch(asset, {
+                credentials: 'omit',
+                cache: 'no-store'
+              });
+              if (response.ok) {
+                await staticCache.put(asset, response.clone());
+                console.log(`✅ Cached: ${asset}`);
+              } else {
+                console.warn(`⚠️ Failed to cache: ${asset} (${response.status})`);
+              }
+            } catch (error) {
+              console.warn(`⚠️ Error caching ${asset}:`, error);
             }
           })
         );
-      }),
-      // Claim clients immediately
-      self.clients.claim()
-    ]).then(() => {
-      console.log('✅ Service worker activated');
-      // Notify all clients about the update
-      return self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({
-            type: 'UPDATE_AVAILABLE',
-            data: {
-              bgColorVersion: BG_COLOR_VERSION,
-              timestamp: new Date().toISOString()
+
+        // Always cache a default manifest
+        const manifestResponse = new Response(
+          JSON.stringify(DEFAULT_MANIFEST),
+          {
+            headers: {
+              'Content-Type': 'application/manifest+json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate'
             }
-          });
-        });
-      });
-    })
+          }
+        );
+        await staticCache.put('/manifest.json', manifestResponse);
+        console.log('✅ Cached default manifest');
+
+        // Skip waiting to activate immediately
+        await self.skipWaiting();
+        console.log('✅ Service worker installed and activated');
+      } catch (error) {
+        console.error('❌ Installation failed:', error);
+      }
+    })()
   );
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        // Get all cache keys
+        const cacheKeys = await caches.keys();
+        
+        // Delete old caches
+        await Promise.all(
+          cacheKeys.map(async (key) => {
+            if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
+              console.log(`🗑️ Deleting old cache: ${key}`);
+              await caches.delete(key);
+            }
+          })
+        );
+
+        // Claim clients
+        await self.clients.claim();
+        console.log('✅ Service worker activated and claimed clients');
+      } catch (error) {
+        console.error('❌ Activation failed:', error);
       }
-      return fetch(event.request);
-    })
+    })()
+  );
+});
+
+// Fetch event - handle requests
+self.addEventListener('fetch', (event) => {
+  // Handle manifest.json requests specially
+  if (event.request.url.endsWith('/manifest.json')) {
+    event.respondWith(
+      (async () => {
+        try {
+          // Try to get from cache first
+          const cache = await caches.open(STATIC_CACHE);
+          const cachedResponse = await cache.match('/manifest.json');
+          
+          if (cachedResponse) {
+            console.log('📄 Serving manifest from cache');
+            return cachedResponse;
+          }
+
+          // If not in cache, try network
+          try {
+            const response = await fetch(event.request, {
+              credentials: 'omit',
+              cache: 'no-store'
+            });
+            
+            if (response.ok) {
+              // Cache the response
+              await cache.put('/manifest.json', response.clone());
+              console.log('📄 Cached new manifest from network');
+              return response;
+            }
+          } catch (error) {
+            console.warn('⚠️ Failed to fetch manifest:', error);
+          }
+
+          // If both cache and network fail, serve default manifest
+          console.log('📄 Serving default manifest');
+          return new Response(
+            JSON.stringify(DEFAULT_MANIFEST),
+            {
+              headers: {
+                'Content-Type': 'application/manifest+json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+              }
+            }
+          );
+        } catch (error) {
+          console.error('❌ Error handling manifest request:', error);
+          // Serve default manifest as last resort
+          return new Response(
+            JSON.stringify(DEFAULT_MANIFEST),
+            {
+              headers: {
+                'Content-Type': 'application/manifest+json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+              }
+            }
+          );
+        }
+      })()
+    );
+    return;
+  }
+
+  // Handle other requests
+  event.respondWith(
+    (async () => {
+      try {
+        // Try cache first
+        const cache = await caches.open(DYNAMIC_CACHE);
+        const cachedResponse = await cache.match(event.request);
+        
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // If not in cache, try network
+        const response = await fetch(event.request, {
+          credentials: 'omit',
+          cache: 'no-store'
+        });
+
+        // Cache successful responses
+        if (response.ok) {
+          await cache.put(event.request, response.clone());
+        }
+
+        return response;
+      } catch (error) {
+        // If both cache and network fail, try to serve offline page
+        if (event.request.mode === 'navigate') {
+          const offlineResponse = await caches.match('/offline.html');
+          if (offlineResponse) {
+            return offlineResponse;
+          }
+        }
+        throw error;
+      }
+    })()
   );
 });
 
@@ -71,8 +224,3 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
-
-// Check for updates every 30 seconds
-setInterval(() => {
-  self.registration.update();
-}, 30000);

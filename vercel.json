@@ -8,7 +8,7 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/manifest.json",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -20,34 +20,56 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "X-Requested-With, Content-Type, Accept"
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
         }
       ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/sw.js",
-      "dest": "/sw.js",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate",
-        "service-worker-allowed": "/",
-        "content-type": "application/javascript",
-        "access-control-allow-origin": "*"
-      }
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
     },
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate",
-        "content-type": "application/manifest+json",
-        "access-control-allow-origin": "*"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/sw.js",
+      "destination": "/sw.js"
     }
   ]
 } 
