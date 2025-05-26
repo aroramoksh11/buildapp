@@ -26,6 +26,17 @@ export default function ClientLayout({
             await reg.unregister();
           }
 
+          // Clear any existing service worker caches
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+            console.log('✅ Cleared existing caches');
+          } catch (cacheError) {
+            console.warn('⚠️ Failed to clear caches:', cacheError);
+          }
+
           // Try to fetch the service worker first with retry logic
           let fetchRetryCount = 0;
           const maxFetchRetries = 3;
@@ -37,7 +48,8 @@ export default function ClientLayout({
                 headers: {
                   'Cache-Control': 'no-cache',
                   'Pragma': 'no-cache'
-                }
+                },
+                credentials: 'omit' // Don't send credentials
               });
 
               if (!response.ok) {
@@ -72,14 +84,28 @@ export default function ClientLayout({
           
           const tryRegister = async (): Promise<ServiceWorkerRegistration> => {
             try {
+              // Wait for any existing service worker to be unregistered
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
               const registration = await navigator.serviceWorker.register('/sw.js', {
                 scope: '/',
-                updateViaCache: 'none'
+                updateViaCache: 'none',
+                type: 'module'
               });
               
               console.log('✅ Service worker registered:', registration.scope);
               return registration;
             } catch (error) {
+              if (error instanceof Error && error.name === 'InvalidStateError') {
+                console.log('🔄 Service worker in invalid state, retrying after cleanup...');
+                // Force cleanup and retry
+                await navigator.serviceWorker.getRegistrations().then(registrations => 
+                  Promise.all(registrations.map(reg => reg.unregister()))
+                );
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return tryRegister();
+              }
+              
               if (retryCount < maxRetries) {
                 retryCount++;
                 const delay = Math.pow(2, retryCount) * 1000;
@@ -111,20 +137,22 @@ export default function ClientLayout({
               }
             });
 
-            // Listen for messages from the service worker
-            navigator.serviceWorker.addEventListener('message', (event) => {
-              if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-                console.log('🔄 Update received:', event.data);
-                setBgColorVersion(event.data.data.bgColorVersion);
+            // Set up periodic update check with error handling
+            const updateInterval = setInterval(async () => {
+              try {
+                if (registration.active) {
+                  await registration.update();
+                }
+              } catch (error) {
+                console.warn('⚠️ Update check failed:', error);
+                // Don't set error state for update failures
               }
-            });
-
-            // Set up periodic update check
-            setInterval(() => {
-              registration.update().catch(error => {
-                console.error('❌ Update check failed:', error);
-              });
             }, 30000); // Check every 30 seconds
+
+            // Cleanup interval on unmount
+            return () => {
+              clearInterval(updateInterval);
+            };
           } catch (error) {
             console.error('❌ Service worker registration failed:', error);
             setRegistrationError(error instanceof Error ? error.message : 'Registration failed');
