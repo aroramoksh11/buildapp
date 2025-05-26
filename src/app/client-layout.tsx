@@ -15,158 +15,135 @@ export default function ClientLayout({
 
   useEffect(() => {
     const registerServiceWorker = async () => {
+      if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+        console.log('Service worker not supported');
+        return;
+      }
+
       try {
-        if ('serviceWorker' in navigator) {
-          console.log('🔄 Starting service worker registration...');
+        // Unregister any existing service workers
+        const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of existingRegistrations) {
+          await registration.unregister();
+        }
 
-          // First, unregister any existing service workers
-          const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-          for (const reg of existingRegistrations) {
-            console.log('🔄 Unregistering existing service worker...');
-            await reg.unregister();
-          }
+        // Clear existing caches
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(cacheName => caches.delete(cacheName))
+        );
 
-          // Clear any existing service worker caches
-          try {
-            const cacheNames = await caches.keys();
-            await Promise.all(
-              cacheNames.map(cacheName => caches.delete(cacheName))
-            );
-            console.log('✅ Cleared existing caches');
-          } catch (cacheError) {
-            console.warn('⚠️ Failed to clear caches:', cacheError);
-          }
+        // Wait a bit after unregistration
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-          // Try to fetch the service worker first with retry logic
-          let fetchRetryCount = 0;
-          const maxFetchRetries = 3;
-          
-          const tryFetchSW = async (): Promise<Response> => {
+        // Try to fetch the service worker file first
+        const tryFetchSW = async (retries = 3, delay = 1000) => {
+          for (let i = 0; i < retries; i++) {
             try {
-              // Add timestamp to prevent caching
-              const timestamp = new Date().getTime();
-              const response = await fetch(`/sw.js?t=${timestamp}`, {
+              const response = await fetch('/sw.js', {
                 method: 'GET',
+                credentials: 'omit',
                 headers: {
                   'Cache-Control': 'no-cache',
                   'Pragma': 'no-cache'
-                },
-                credentials: 'omit',
-                mode: 'cors'
-              });
-
-              if (!response.ok) {
-                throw new Error(`Service worker fetch failed with status ${response.status}`);
-              }
-
-              console.log('✅ Service worker file is accessible');
-              return response;
-            } catch (error) {
-              if (fetchRetryCount < maxFetchRetries) {
-                fetchRetryCount++;
-                const delay = Math.pow(2, fetchRetryCount) * 1000;
-                console.log(`🔄 Retry fetching service worker ${fetchRetryCount}/${maxFetchRetries} in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return tryFetchSW();
-              }
-              throw error;
-            }
-          };
-
-          try {
-            await tryFetchSW();
-          } catch (fetchError) {
-            console.error('❌ Service worker file fetch failed:', fetchError);
-            setRegistrationError('Service worker file not found. Please check your deployment.');
-            return;
-          }
-          
-          // Register service worker with retry
-          let retryCount = 0;
-          const maxRetries = 3;
-          
-          const tryRegister = async (): Promise<ServiceWorkerRegistration> => {
-            try {
-              // Wait for any existing service worker to be unregistered
-              await new Promise(resolve => setTimeout(resolve, 1000));
-
-              // Add timestamp to prevent caching
-              const timestamp = new Date().getTime();
-              const registration = await navigator.serviceWorker.register(`/sw.js?t=${timestamp}`, {
-                scope: '/',
-                updateViaCache: 'none',
-                type: 'module'
-              });
-              
-              console.log('✅ Service worker registered:', registration.scope);
-              return registration;
-            } catch (error) {
-              if (error instanceof Error && error.name === 'InvalidStateError') {
-                console.log('🔄 Service worker in invalid state, retrying after cleanup...');
-                // Force cleanup and retry
-                await navigator.serviceWorker.getRegistrations().then(registrations => 
-                  Promise.all(registrations.map(reg => reg.unregister()))
-                );
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return tryRegister();
-              }
-              
-              if (retryCount < maxRetries) {
-                retryCount++;
-                const delay = Math.pow(2, retryCount) * 1000;
-                console.log(`🔄 Retry registration ${retryCount}/${maxRetries} in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return tryRegister();
-              }
-              throw error;
-            }
-          };
-
-          try {
-            const registration = await tryRegister();
-            setRegistration(registration);
-            setRegistrationError(null);
-
-            // Handle updates
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('🔄 Update available, applying automatically...');
-                    // Automatically apply the update
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
-                });
-              }
-            });
-
-            // Set up periodic update check with error handling
-            const updateInterval = setInterval(async () => {
-              try {
-                if (registration.active) {
-                  const timestamp = new Date().getTime();
-                  await registration.update();
                 }
-              } catch (error) {
-                console.warn('⚠️ Update check failed:', error);
-                // Don't set error state for update failures
+              });
+              
+              if (!response.ok) {
+                throw new Error(`Failed to fetch service worker: ${response.status} ${response.statusText}`);
               }
-            }, 30000); // Check every 30 seconds
-
-            // Cleanup interval on unmount
-            return () => {
-              clearInterval(updateInterval);
-            };
-          } catch (error) {
-            console.error('❌ Service worker registration failed:', error);
-            setRegistrationError(error instanceof Error ? error.message : 'Registration failed');
+              
+              const text = await response.text();
+              if (!text || text.trim().length === 0) {
+                throw new Error('Service worker file is empty');
+              }
+              
+              return true;
+            } catch (error) {
+              console.error(`Attempt ${i + 1} to fetch service worker failed:`, error);
+              if (i === retries - 1) {
+                setRegistrationError('Service worker file not found. Please refresh the page or try again later.');
+                throw error;
+              }
+              await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            }
           }
-        }
+        };
+
+        // Try to fetch the service worker file
+        await tryFetchSW();
+
+        // Try to register the service worker
+        const tryRegister = async (retries = 3, delay = 1000) => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              const registration = await navigator.serviceWorker.register('/sw.js', {
+                type: 'module',
+                scope: '/',
+                updateViaCache: 'none'
+              });
+
+              if (registration.installing) {
+                console.log('Service worker installing');
+              } else if (registration.waiting) {
+                console.log('Service worker installed');
+              } else if (registration.active) {
+                console.log('Service worker active');
+              }
+
+              // Set up update check
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      // New content is available, refresh the page
+                      window.location.reload();
+                    }
+                  });
+                }
+              });
+
+              // Handle messages from the service worker
+              navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SKIP_WAITING') {
+                  registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+
+              // Set up periodic update check
+              const updateInterval = setInterval(async () => {
+                try {
+                  await registration.update();
+                } catch (error) {
+                  console.error('Error checking for updates:', error);
+                  // Don't set error state for update failures
+                }
+              }, 30000); // Check every 30 seconds
+
+              // Clean up interval on component unmount
+              return () => clearInterval(updateInterval);
+
+            } catch (error) {
+              console.error(`Attempt ${i + 1} to register service worker failed:`, error);
+              if (error instanceof Error && error.name === 'InvalidStateError') {
+                // Force cleanup and retry
+                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+                continue;
+              }
+              if (i === retries - 1) {
+                setRegistrationError('Service worker registration failed. Please refresh the page or try again later.');
+                throw error;
+              }
+              await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            }
+          }
+        };
+
+        await tryRegister();
       } catch (error) {
-        console.error('❌ Service worker registration failed:', error);
-        setRegistrationError(error instanceof Error ? error.message : 'Registration failed');
+        console.error('Service worker registration failed:', error);
+        setRegistrationError('Service worker registration failed. Please refresh the page or try again later.');
       }
     };
 
