@@ -3,11 +3,37 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 249, 250, 251;
+  --background-start: #1e40af;
+  --background-end: #3b82f6;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  background: linear-gradient(to bottom right, var(--background-start), var(--background-end));
+  min-height: 100vh;
+  color: white;
+}
+
+/* Add smooth transition for background changes */
+body {
+  transition: background 0.5s ease-in-out;
+}
+
+/* Ensure text is readable on the new background */
+.text-gray-700 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.text-gray-600 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Update card backgrounds to be semi-transparent */
+.bg-white {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Update any existing background classes */
+.bg-gray-50 {
+  background-color: transparent !important;
 }

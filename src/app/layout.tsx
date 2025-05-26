@@ -53,9 +53,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="AutoDrive" />
         <meta name="application-name" content="AutoDrive" />
       </head>
-      <body className="min-h-screen bg-gray-50">
+      <body className={`${inter.className} antialiased`}>
         <ClientLayout>
-          {children}
+          <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-500">
+            {children}
+          </div>
         </ClientLayout>
       </body>
     </html>
