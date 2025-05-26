@@ -1,40 +1,14 @@
 {
   "version": 2,
-  "headers": [
+  "builds": [
     {
-      "source": "/sw.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        },
-        {
-          "key": "Service-Worker-Allowed",
-          "value": "/"
-        }
-      ]
-    },
-    {
-      "source": "/manifest.json",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        },
-        {
-          "key": "Content-Type",
-          "value": "application/manifest+json"
-        }
-      ]
+      "src": "public/sw.js",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "handle": "filesystem"
-    },
-    {
       "src": "/sw.js",
-      "dest": "/sw.js",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate",
         "service-worker-allowed": "/"
@@ -43,7 +17,6 @@
     },
     {
       "src": "/manifest.json",
-      "dest": "/manifest.json",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate",
         "content-type": "application/manifest+json"
@@ -51,7 +24,7 @@
       "continue": true
     },
     {
-      "handle": "miss"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
