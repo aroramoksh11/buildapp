@@ -4,10 +4,6 @@
     {
       "src": "package.json",
       "use": "@vercel/next"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
     }
   ],
   "headers": [
@@ -64,17 +60,33 @@
           "value": "/"
         }
       ]
+    },
+    {
+      "source": "/workbox-*.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
       "source": "/manifest.json",
-      "destination": "/public/manifest.json"
+      "destination": "/manifest.json"
     },
     {
       "source": "/sw.js",
-      "destination": "/public/sw.js"
+      "destination": "/sw.js"
+    },
+    {
+      "source": "/workbox-*.js",
+      "destination": "/workbox-*.js"
     }
-  ],
-  "public": true
+  ]
 } 
