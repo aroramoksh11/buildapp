@@ -7,13 +7,38 @@ export default function UpdatePrompt() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateProgress, setUpdateProgress] = useState(0)
   const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(null)
+  const [nextCheckTime, setNextCheckTime] = useState<Date | null>(null)
+
+  // Force an immediate check when component mounts
+  useEffect(() => {
+    const forceUpdateCheck = async () => {
+      console.log('🔄 Forcing immediate update check...')
+      try {
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (registration) {
+          console.log('📱 Service worker found, checking for updates...')
+          await registration.update()
+          // Force show the prompt for testing
+          setShowUpdatePrompt(true)
+          setLastUpdateTime(new Date().toISOString())
+        } else {
+          console.log('❌ No service worker registration found')
+        }
+      } catch (error) {
+        console.error('❌ Error during forced update check:', error)
+      }
+    }
+
+    forceUpdateCheck()
+  }, [])
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       // Listen for messages from the service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('📨 Received message from service worker:', event.data)
         if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-          console.log('Update available:', event.data)
+          console.log('✨ Update available:', event.data)
           setLastUpdateTime(event.data.data.timestamp)
           handleAutomaticUpdate()
         }
@@ -21,14 +46,27 @@ export default function UpdatePrompt() {
 
       // Check for updates every 2 minutes
       const checkForUpdates = async () => {
+        const now = new Date()
+        const nextCheck = new Date(now.getTime() + 2 * 60 * 1000)
+        setNextCheckTime(nextCheck)
+        
+        console.log('⏰ Checking for updates...', {
+          currentTime: now.toLocaleTimeString(),
+          nextCheck: nextCheck.toLocaleTimeString()
+        })
+
         try {
           const registration = await navigator.serviceWorker.getRegistration()
           if (registration) {
-            console.log('Checking for updates...')
+            console.log('📱 Service worker found, updating...')
             await registration.update()
+            // Force show the prompt for testing
+            setShowUpdatePrompt(true)
+          } else {
+            console.log('❌ No service worker registration found')
           }
         } catch (error) {
-          console.error('Error checking for updates:', error)
+          console.error('❌ Error checking for updates:', error)
         }
       }
 
@@ -114,6 +152,11 @@ export default function UpdatePrompt() {
             {lastUpdateTime && (
               <p className="mt-1 text-xs text-pink-600">
                 Last update: {new Date(lastUpdateTime).toLocaleString()}
+              </p>
+            )}
+            {nextCheckTime && (
+              <p className="mt-1 text-xs text-purple-600">
+                Next check: {nextCheckTime.toLocaleTimeString()}
               </p>
             )}
           </div>
