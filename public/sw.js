@@ -1,7 +1,8 @@
 // Service Worker for AutoDrive PWA
-const CACHE_NAME = 'autodrive-cache-v3';
-const STATIC_CACHE = 'static-cache-v3';
-const DYNAMIC_CACHE = 'dynamic-cache-v3';
+const CACHE_VERSION = 'v4';
+const CACHE_NAME = `autodrive-cache-${CACHE_VERSION}`;
+const STATIC_CACHE = `static-cache-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `dynamic-cache-${CACHE_VERSION}`;
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -9,166 +10,191 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/maskable-icon-192x192.png',
-  '/icons/maskable-icon-512x512.png',
+  '/sw.js',
+  '/globals.css',
+  '/version.json',
   '/favicon.ico',
-  '/globals.css'
+  '/icon-192x192.png',
+  '/icon-512x512.png'
 ];
+
+// Default manifest for fallback
+const DEFAULT_MANIFEST = {
+  name: 'AutoDrive',
+  short_name: 'AutoDrive',
+  description: 'Self-Driving Car Simulator PWA',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#ffffff',
+  theme_color: '#ffffff',
+  icons: [
+    {
+      src: '/icon-192x192.png',
+      sizes: '192x192',
+      type: 'image/png'
+    },
+    {
+      src: '/icon-512x512.png',
+      sizes: '512x512',
+      type: 'image/png'
+    }
+  ]
+};
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('📦 Service Worker installing...', event);
+  console.log('📦 Service worker installing...');
   event.waitUntil(
-    Promise.all([
-      caches.open(STATIC_CACHE).then((cache) => {
-        console.log('📦 Caching static assets:', STATIC_ASSETS);
-        return Promise.all(
+    (async () => {
+      try {
+        const cache = await caches.open(STATIC_CACHE);
+        console.log('📦 Caching static assets...');
+        
+        // Cache each asset individually with error handling
+        await Promise.all(
           STATIC_ASSETS.map(async (asset) => {
             try {
-              const response = await fetch(asset, { credentials: 'same-origin' });
-              if (!response.ok) throw new Error(`Failed to fetch ${asset}`);
-              return cache.put(asset, response);
+              const response = await fetch(asset, {
+                credentials: 'same-origin',
+                cache: 'no-store'
+              });
+              if (response.ok) {
+                await cache.put(asset, response);
+                console.log(`✅ Cached: ${asset}`);
+              } else {
+                console.warn(`⚠️ Failed to cache: ${asset} (${response.status})`);
+              }
             } catch (error) {
-              console.error(`❌ Failed to cache ${asset}:`, error);
-              // Don't throw, continue with other assets
-              return Promise.resolve();
+              console.error(`❌ Error caching ${asset}:`, error);
             }
           })
         );
-      }),
-      // Skip waiting to activate new service worker immediately
-      self.skipWaiting().then(() => {
-        console.log('⚡ Service Worker skipped waiting');
-      })
-    ])
-  );
-});
-
-// Activate event - clean up old caches and take control
-self.addEventListener('activate', (event) => {
-  console.log('🚀 Service Worker activating...', event);
-  event.waitUntil(
-    Promise.all([
-      // Clean up old caches
-      caches.keys().then((cacheNames) => {
-        console.log('🧹 Cleaning up old caches:', cacheNames);
-        return Promise.all(
-          cacheNames
-            .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
-            .map((name) => {
-              console.log('🗑️ Deleting old cache:', name);
-              return caches.delete(name);
-            })
-        );
-      }),
-      // Take control of all clients immediately
-      self.clients.claim().then(() => {
-        console.log('👑 Service Worker claimed clients');
-        // Notify all clients about the update
-        self.clients.matchAll().then((clients) => {
-          clients.forEach((client) => {
-            client.postMessage({
-              type: 'UPDATE_AVAILABLE',
-              data: {
-                timestamp: new Date().toISOString(),
-                version: CACHE_NAME
-              }
-            });
+        
+        // Ensure manifest.json is always available
+        const manifestResponse = await fetch('/manifest.json', {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        }).catch(() => {
+          console.log('⚠️ Using fallback manifest');
+          return new Response(JSON.stringify(DEFAULT_MANIFEST), {
+            headers: { 'Content-Type': 'application/json' }
           });
         });
-      })
-    ])
+        
+        await cache.put('/manifest.json', manifestResponse);
+        console.log('✅ Service worker installed successfully');
+      } catch (error) {
+        console.error('❌ Cache installation failed:', error);
+      }
+    })()
   );
 });
 
-// Fetch event - handle network requests with improved caching
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('🔄 Service worker activating...');
+  event.waitUntil(
+    (async () => {
+      try {
+        const cacheKeys = await caches.keys();
+        await Promise.all(
+          cacheKeys
+            .filter(key => key.startsWith('autodrive-cache-') && key !== CACHE_NAME)
+            .map(key => {
+              console.log(`🗑️ Deleting old cache: ${key}`);
+              return caches.delete(key);
+            })
+        );
+        console.log('✅ Service worker activated');
+        await self.clients.claim();
+      } catch (error) {
+        console.error('❌ Cache cleanup failed:', error);
+      }
+    })()
+  );
+});
 
-  // Handle manifest.json specially
-  if (event.request.url.endsWith('manifest.json')) {
+// Fetch event - handle requests
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Special handling for manifest.json
+  if (url.pathname === '/manifest.json') {
     event.respondWith(
-      caches.match('/manifest.json')
-        .then((cachedResponse) => {
+      (async () => {
+        try {
+          // Try cache first
+          const cache = await caches.open(STATIC_CACHE);
+          const cachedResponse = await cache.match('/manifest.json');
           if (cachedResponse) {
             console.log('📦 Serving manifest from cache');
             return cachedResponse;
           }
 
-          return fetch(event.request, { credentials: 'same-origin' })
-            .then(response => {
-              if (!response.ok) {
-                throw new Error('Manifest fetch failed');
-              }
-              // Cache the new manifest
-              const responseToCache = response.clone();
-              caches.open(STATIC_CACHE).then(cache => {
-                cache.put('/manifest.json', responseToCache);
-              });
-              return response;
-            })
-            .catch(error => {
-              console.error('❌ Manifest fetch error:', error);
-              // Return a basic manifest if both fetch and cache fail
-              return new Response(JSON.stringify({
-                name: "AutoDrive",
-                short_name: "AutoDrive",
-                start_url: "/",
-                display: "standalone",
-                background_color: "#1e40af",
-                theme_color: "#3b82f6"
-              }), {
-                headers: { 'Content-Type': 'application/json' }
-              });
-            });
-        })
+          // Try network
+          const response = await fetch(event.request, {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          });
+          
+          if (response.ok) {
+            await cache.put('/manifest.json', response.clone());
+            return response;
+          }
+          
+          // Fallback to default manifest
+          console.log('⚠️ Using fallback manifest');
+          return new Response(JSON.stringify(DEFAULT_MANIFEST), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('❌ Manifest fetch failed:', error);
+          return new Response(JSON.stringify(DEFAULT_MANIFEST), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      })()
     );
     return;
   }
 
+  // Handle other requests
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached response if found
-      if (response) {
-        console.log('📦 Serving from cache:', event.request.url);
-        return response;
-      }
+    (async () => {
+      try {
+        // Try cache first
+        const cache = await caches.open(STATIC_CACHE);
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
 
-      // Clone the request because it can only be used once
-      const fetchRequest = event.request.clone();
-
-      return fetch(fetchRequest)
-        .then((response) => {
-          // Check if we received a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response because it can only be used once
-          const responseToCache = response.clone();
-
-          // Cache the response
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            console.log('📦 Caching new resource:', event.request.url);
-            cache.put(event.request, responseToCache);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // Return offline page for navigation requests
-          if (event.request.mode === 'navigate') {
-            console.log('📱 Offline navigation, serving offline page');
-            return caches.match('/offline.html');
-          }
-          // Return a fallback for other requests
-          console.log('❌ Network request failed:', event.request.url);
-          return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
+        // Try network
+        const response = await fetch(event.request, {
+          credentials: 'same-origin',
+          cache: 'no-store'
         });
-    })
+        
+        if (response.ok) {
+          // Cache successful responses
+          const cacheToUse = STATIC_ASSETS.includes(url.pathname) ? STATIC_CACHE : DYNAMIC_CACHE;
+          const cache = await caches.open(cacheToUse);
+          await cache.put(event.request, response.clone());
+        }
+        
+        return response;
+      } catch (error) {
+        // Return offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          const cache = await caches.open(STATIC_CACHE);
+          const offlinePage = await cache.match('/offline.html');
+          if (offlinePage) {
+            return offlinePage;
+          }
+        }
+        throw error;
+      }
+    })()
   );
 });
 
