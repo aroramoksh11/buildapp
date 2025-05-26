@@ -100,19 +100,19 @@ export default function UpdatePrompt() {
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999]">
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-2xl p-4 max-w-sm w-full border border-gray-200">
+      <div className="bg-gradient-to-r from-pink-50 to-purple-50 backdrop-blur-sm rounded-xl shadow-2xl p-4 max-w-sm w-full border border-pink-200">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {isUpdating ? '✨ Updating AutoDrive' : '✨ New Update Available'}
+            <h3 className="text-lg font-semibold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              {isUpdating ? '🚀 Updating AutoDrive' : '✨ New Update Available'}
             </h3>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-700">
               {isUpdating
                 ? 'Please wait while we update your app...'
                 : 'A new version of AutoDrive is ready to install.'}
             </p>
             {lastUpdateTime && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-pink-600">
                 Last update: {new Date(lastUpdateTime).toLocaleString()}
               </p>
             )}
@@ -120,7 +120,7 @@ export default function UpdatePrompt() {
           {!isUpdating && (
             <button
               onClick={() => setShowUpdatePrompt(false)}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-pink-400 hover:text-pink-600 transition-colors"
             >
               <span className="sr-only">Close</span>
               <svg
@@ -142,27 +142,27 @@ export default function UpdatePrompt() {
 
         {isUpdating ? (
           <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-pink-100 rounded-full h-2.5">
               <div
-                className="bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-pink-400 via-pink-500 to-purple-600 h-2.5 rounded-full transition-all duration-300 shadow-sm"
                 style={{ width: `${updateProgress}%` }}
               />
             </div>
-            <p className="mt-2 text-sm text-gray-600 text-center">
-              {updateProgress === 100 ? 'Update Complete!' : `Updating... ${updateProgress}%`}
+            <p className="mt-2 text-sm text-pink-600 text-center font-medium">
+              {updateProgress === 100 ? '🎉 Update Complete!' : `Updating... ${updateProgress}%`}
             </p>
           </div>
         ) : (
           <div className="mt-4 flex gap-3">
             <button
               onClick={() => setShowUpdatePrompt(false)}
-              className="flex-1 px-4 py-2 text-sm font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200"
+              className="flex-1 px-4 py-2 text-sm font-medium text-pink-600 bg-white hover:bg-pink-50 rounded-lg transition-colors border border-pink-200 shadow-sm"
             >
               Later
             </button>
             <button
               onClick={handleAutomaticUpdate}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:from-pink-500 hover:via-pink-600 hover:to-pink-700 rounded-lg transition-colors shadow-sm"
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 via-pink-600 to-purple-600 hover:from-pink-600 hover:via-pink-700 hover:to-purple-700 rounded-lg transition-colors shadow-sm"
             >
               Update Now
             </button>
