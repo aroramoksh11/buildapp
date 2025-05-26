@@ -45,12 +45,19 @@ export default function UpdatePrompt() {
     setIsUpdating(true)
     setUpdateProgress(0)
 
-    // Simulate progress
+    // Simulate progress with completion
     const progressInterval = setInterval(() => {
       setUpdateProgress((prev) => {
-        if (prev >= 90) {
+        if (prev >= 100) {
           clearInterval(progressInterval)
-          return prev
+          // Complete the update after reaching 100%
+          setTimeout(() => {
+            setIsUpdating(false)
+            setShowUpdatePrompt(false)
+            // Reload the page to apply updates
+            window.location.reload()
+          }, 500)
+          return 100
         }
         return prev + 10
       })
@@ -67,6 +74,7 @@ export default function UpdatePrompt() {
       console.error('Error updating:', error)
       setIsUpdating(false)
       setUpdateProgress(0)
+      clearInterval(progressInterval)
     }
   }
 
@@ -82,25 +90,27 @@ export default function UpdatePrompt() {
               A new version of AutoDrive is ready to install.
             </p>
           </div>
-          <button
-            onClick={() => setShowUpdatePrompt(false)}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <span className="sr-only">Close</span>
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {!isUpdating && (
+            <button
+              onClick={() => setShowUpdatePrompt(false)}
+              className="text-gray-400 hover:text-gray-500"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <span className="sr-only">Close</span>
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
         </div>
 
         {isUpdating ? (
@@ -112,7 +122,7 @@ export default function UpdatePrompt() {
               />
             </div>
             <p className="mt-2 text-sm text-gray-600 text-center">
-              Updating... {updateProgress}%
+              {updateProgress === 100 ? 'Update Complete!' : `Updating... ${updateProgress}%`}
             </p>
           </div>
         ) : (
