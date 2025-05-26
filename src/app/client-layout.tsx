@@ -51,8 +51,8 @@ export default function ClientLayout({
                   'Cache-Control': 'no-cache',
                   'Pragma': 'no-cache'
                 },
-                credentials: 'same-origin',
-                mode: 'same-origin'
+                credentials: 'omit',
+                mode: 'cors'
               });
 
               if (!response.ok) {
@@ -95,7 +95,7 @@ export default function ClientLayout({
               const registration = await navigator.serviceWorker.register(`/sw.js?t=${timestamp}`, {
                 scope: '/',
                 updateViaCache: 'none',
-                type: 'classic'
+                type: 'module'
               });
               
               console.log('✅ Service worker registered:', registration.scope);
