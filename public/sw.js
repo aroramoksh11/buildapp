@@ -120,7 +120,7 @@ self.addEventListener('periodicsync', (event) => {
 
 // Register periodic sync
 self.registration.periodicSync.register('check-for-updates', {
-  minInterval: 5 * 60 * 1000 // 5 minutes
+  minInterval: 2 * 60 * 1000 // 2 minutes
 }).catch((error) => {
   console.error('Periodic sync registration failed:', error);
 });

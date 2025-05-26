@@ -19,7 +19,7 @@ export default function UpdatePrompt() {
         }
       })
 
-      // Check for updates every 5 minutes
+      // Check for updates every 2 minutes
       const checkForUpdates = async () => {
         try {
           const registration = await navigator.serviceWorker.getRegistration()
@@ -35,8 +35,8 @@ export default function UpdatePrompt() {
       // Initial check
       checkForUpdates()
 
-      // Set up periodic checks
-      const interval = setInterval(checkForUpdates, 5 * 60 * 1000)
+      // Set up periodic checks every 2 minutes
+      const interval = setInterval(checkForUpdates, 2 * 60 * 1000)
 
       return () => clearInterval(interval)
     }
