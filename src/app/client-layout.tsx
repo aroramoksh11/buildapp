@@ -27,6 +27,26 @@ export default function ClientLayout({
         if ('serviceWorker' in navigator) {
           console.log('🔄 Starting fresh service worker registration...');
           
+          // Try to fetch the service worker first to check if it's accessible
+          try {
+            const response = await fetch('/sw.js', {
+              method: 'GET',
+              headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Service worker fetch failed with status ${response.status}`);
+            }
+            
+            console.log('✅ Service worker file is accessible');
+          } catch (fetchError) {
+            console.error('❌ Service worker file fetch failed:', fetchError);
+            throw fetchError;
+          }
+
           // Register new service worker with explicit scope and type
           const newRegistration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
@@ -100,9 +120,9 @@ export default function ClientLayout({
     };
 
     // Add a small delay before initial registration to ensure the page is fully loaded
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       registerServiceWorker();
-    }, 1000);
+    }, 2000); // Increased delay to 2 seconds
 
     // Check if the app is installed
     const checkIfInstalled = () => {
@@ -115,6 +135,7 @@ export default function ClientLayout({
     window.addEventListener('appinstalled', checkIfInstalled);
 
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('appinstalled', checkIfInstalled);
     };
   }, []);
