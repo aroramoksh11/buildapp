@@ -1,3 +1,4 @@
+/** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -30,12 +31,13 @@ const withPWA = require('next-pwa')({
   ]
 })
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
   images: {
     domains: ['tile.openstreetmap.org'],
-  },
+    unoptimized: true
+  }
 }
 
 module.exports = withPWA(nextConfig) 

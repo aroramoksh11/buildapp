@@ -26,14 +26,13 @@
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",
     "eslint-config-next": "13.5.6",
-    "glob": "^10.3.10",
     "postcss": "^8.4.35",
-    "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   },
-  "overrides": {
+  "resolutions": {
     "glob": "^10.3.10",
-    "rimraf": "^5.0.5"
+    "globby": "^13.2.2",
+    "del": "^7.0.0"
   }
 }
