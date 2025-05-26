@@ -116,7 +116,7 @@ export default function UpdatePrompt() {
           <div className="mt-4 flex gap-3">
             <button
               onClick={() => setShowUpdatePrompt(false)}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2 text-sm font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors border border-pink-200"
             >
               Later
             </button>
