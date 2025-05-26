@@ -12,9 +12,10 @@ export default function ClientLayout({
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
   useEffect(() => {
-    const registerServiceWorker = async () => {
+    const registerServiceWorker = async (retryCount = 0) => {
       try {
         // First, unregister any existing service workers
         const existingRegistrations = await navigator.serviceWorker.getRegistrations();
@@ -26,14 +27,18 @@ export default function ClientLayout({
         if ('serviceWorker' in navigator) {
           console.log('🔄 Starting fresh service worker registration...');
           
+          // Add cache-busting query parameter
+          const swUrl = `/sw.js?v=${Date.now()}`;
+          
           // Register new service worker with explicit scope and type
-          const newRegistration = await navigator.serviceWorker.register('/sw.js', {
+          const newRegistration = await navigator.serviceWorker.register(swUrl, {
             scope: '/',
             type: 'module',
             updateViaCache: 'none'
           });
 
           console.log('📦 Service worker registration successful:', newRegistration.scope);
+          setRegistrationError(null);
 
           // Wait for the service worker to be ready
           if (newRegistration.installing) {
@@ -86,6 +91,14 @@ export default function ClientLayout({
         }
       } catch (error) {
         console.error('❌ Service worker registration failed:', error);
+        setRegistrationError(error instanceof Error ? error.message : 'Registration failed');
+        
+        // Retry registration up to 3 times with exponential backoff
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`🔄 Retrying registration in ${delay}ms...`);
+          setTimeout(() => registerServiceWorker(retryCount + 1), delay);
+        }
       }
     };
 
@@ -121,6 +134,13 @@ export default function ClientLayout({
 
   return (
     <>
+      {registrationError && (
+        <div className="fixed bottom-4 left-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg z-[9999]">
+          <p className="text-sm">
+            Service worker registration failed. Please refresh the page or try again later.
+          </p>
+        </div>
+      )}
       {!isInstalled && <InstallPrompt />}
       {updateAvailable && <UpdatePrompt onUpdate={handleUpdate} />}
       {children}
