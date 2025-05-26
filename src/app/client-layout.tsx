@@ -44,6 +44,7 @@ export default function ClientLayout({
                 method: 'GET',
                 credentials: 'omit',
                 headers: {
+                  'Accept': 'application/javascript',
                   'Cache-Control': 'no-cache',
                   'Pragma': 'no-cache'
                 }
