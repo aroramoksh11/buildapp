@@ -43,13 +43,16 @@ export default function ClientLayout({
           
           const tryFetchSW = async (): Promise<Response> => {
             try {
-              const response = await fetch('/sw.js', {
+              // Add timestamp to prevent caching
+              const timestamp = new Date().getTime();
+              const response = await fetch(`/sw.js?t=${timestamp}`, {
                 method: 'GET',
                 headers: {
                   'Cache-Control': 'no-cache',
                   'Pragma': 'no-cache'
                 },
-                credentials: 'omit' // Don't send credentials
+                credentials: 'same-origin',
+                mode: 'same-origin'
               });
 
               if (!response.ok) {
@@ -87,10 +90,12 @@ export default function ClientLayout({
               // Wait for any existing service worker to be unregistered
               await new Promise(resolve => setTimeout(resolve, 1000));
 
-              const registration = await navigator.serviceWorker.register('/sw.js', {
+              // Add timestamp to prevent caching
+              const timestamp = new Date().getTime();
+              const registration = await navigator.serviceWorker.register(`/sw.js?t=${timestamp}`, {
                 scope: '/',
                 updateViaCache: 'none',
-                type: 'module'
+                type: 'classic'
               });
               
               console.log('✅ Service worker registered:', registration.scope);
@@ -141,6 +146,7 @@ export default function ClientLayout({
             const updateInterval = setInterval(async () => {
               try {
                 if (registration.active) {
+                  const timestamp = new Date().getTime();
                   await registration.update();
                 }
               } catch (error) {
