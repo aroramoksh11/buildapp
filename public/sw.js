@@ -1,7 +1,7 @@
 // Service Worker for AutoDrive PWA
-const CACHE_NAME = 'autodrive-cache-v2';
-const STATIC_CACHE = 'static-cache-v2';
-const DYNAMIC_CACHE = 'dynamic-cache-v2';
+const CACHE_NAME = 'autodrive-cache-v3';
+const STATIC_CACHE = 'static-cache-v3';
+const DYNAMIC_CACHE = 'dynamic-cache-v3';
 
 // Files to cache immediately
 const STATIC_ASSETS = [
@@ -13,7 +13,8 @@ const STATIC_ASSETS = [
   '/icons/icon-512x512.png',
   '/icons/maskable-icon-192x192.png',
   '/icons/maskable-icon-512x512.png',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/globals.css'
 ];
 
 // Install event - cache static assets
@@ -23,7 +24,19 @@ self.addEventListener('install', (event) => {
     Promise.all([
       caches.open(STATIC_CACHE).then((cache) => {
         console.log('📦 Caching static assets:', STATIC_ASSETS);
-        return cache.addAll(STATIC_ASSETS);
+        return Promise.all(
+          STATIC_ASSETS.map(async (asset) => {
+            try {
+              const response = await fetch(asset, { credentials: 'same-origin' });
+              if (!response.ok) throw new Error(`Failed to fetch ${asset}`);
+              return cache.put(asset, response);
+            } catch (error) {
+              console.error(`❌ Failed to cache ${asset}:`, error);
+              // Don't throw, continue with other assets
+              return Promise.resolve();
+            }
+          })
+        );
       }),
       // Skip waiting to activate new service worker immediately
       self.skipWaiting().then(() => {
@@ -78,16 +91,39 @@ self.addEventListener('fetch', (event) => {
   // Handle manifest.json specially
   if (event.request.url.endsWith('manifest.json')) {
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Manifest fetch failed');
+      caches.match('/manifest.json')
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('📦 Serving manifest from cache');
+            return cachedResponse;
           }
-          return response;
-        })
-        .catch(error => {
-          console.error('❌ Manifest fetch error:', error);
-          return caches.match('/manifest.json');
+
+          return fetch(event.request, { credentials: 'same-origin' })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Manifest fetch failed');
+              }
+              // Cache the new manifest
+              const responseToCache = response.clone();
+              caches.open(STATIC_CACHE).then(cache => {
+                cache.put('/manifest.json', responseToCache);
+              });
+              return response;
+            })
+            .catch(error => {
+              console.error('❌ Manifest fetch error:', error);
+              // Return a basic manifest if both fetch and cache fail
+              return new Response(JSON.stringify({
+                name: "AutoDrive",
+                short_name: "AutoDrive",
+                start_url: "/",
+                display: "standalone",
+                background_color: "#1e40af",
+                theme_color: "#3b82f6"
+              }), {
+                headers: { 'Content-Type': 'application/json' }
+              });
+            });
         })
     );
     return;
