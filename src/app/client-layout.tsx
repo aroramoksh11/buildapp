@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import InstallPrompt from '@/components/InstallPrompt'
-import UpdatePrompt from '@/components/UpdatePrompt'
 
 export default function ClientLayout({
   children,
@@ -10,9 +9,9 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [bgColorVersion, setBgColorVersion] = useState<string>('default');
 
   useEffect(() => {
     const registerServiceWorker = async () => {
@@ -35,10 +34,20 @@ export default function ClientLayout({
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 Update available!');
-                  setUpdateAvailable(true);
+                  console.log('🔄 Update available, applying automatically...');
+                  // Automatically apply the update
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  window.location.reload();
                 }
               });
+            }
+          });
+
+          // Listen for messages from the service worker
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+              console.log('🔄 Update received:', event.data);
+              setBgColorVersion(event.data.data.bgColorVersion);
             }
           });
         }
@@ -67,18 +76,18 @@ export default function ClientLayout({
     };
   }, []);
 
-  const handleUpdate = async () => {
-    if (registration?.waiting) {
-      try {
-        console.log('🔄 Applying update...');
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        setUpdateAvailable(false);
-        window.location.reload();
-      } catch (error) {
-        console.error('❌ Update application failed:', error);
-      }
+  // Apply background color based on version
+  useEffect(() => {
+    if (bgColorVersion === 'blue-v1') {
+      document.documentElement.style.setProperty('--background-start', '#1e40af');
+      document.documentElement.style.setProperty('--background-end', '#3b82f6');
+      document.body.classList.add('bg-blue-gradient');
+    } else {
+      document.documentElement.style.setProperty('--background-start', '#ffffff');
+      document.documentElement.style.setProperty('--background-end', '#f8fafc');
+      document.body.classList.remove('bg-blue-gradient');
     }
-  };
+  }, [bgColorVersion]);
 
   return (
     <>
@@ -90,7 +99,6 @@ export default function ClientLayout({
         </div>
       )}
       {!isInstalled && <InstallPrompt />}
-      {updateAvailable && <UpdatePrompt onUpdate={handleUpdate} />}
       {children}
     </>
   );
