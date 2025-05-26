@@ -104,7 +104,7 @@ export default function UpdatePrompt() {
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
-                className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${updateProgress}%` }}
               />
             </div>
@@ -122,7 +122,7 @@ export default function UpdatePrompt() {
             </button>
             <button
               onClick={handleUpdate}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-600 rounded-lg transition-colors shadow-sm"
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:from-pink-500 hover:via-pink-600 hover:to-pink-700 rounded-lg transition-colors shadow-sm"
             >
               Update Now
             </button>
