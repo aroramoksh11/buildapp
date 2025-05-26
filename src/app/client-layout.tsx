@@ -26,24 +26,44 @@ export default function ClientLayout({
             await reg.unregister();
           }
 
-          // Try to fetch the service worker first
-          try {
-            const response = await fetch('/sw.js', {
-              method: 'GET',
-              headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+          // Try to fetch the service worker first with retry logic
+          let fetchRetryCount = 0;
+          const maxFetchRetries = 3;
+          
+          const tryFetchSW = async (): Promise<Response> => {
+            try {
+              const response = await fetch('/sw.js', {
+                method: 'GET',
+                headers: {
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache'
+                }
+              });
+
+              if (!response.ok) {
+                throw new Error(`Service worker fetch failed with status ${response.status}`);
               }
-            });
 
-            if (!response.ok) {
-              throw new Error(`Service worker fetch failed with status ${response.status}`);
+              console.log('✅ Service worker file is accessible');
+              return response;
+            } catch (error) {
+              if (fetchRetryCount < maxFetchRetries) {
+                fetchRetryCount++;
+                const delay = Math.pow(2, fetchRetryCount) * 1000;
+                console.log(`🔄 Retry fetching service worker ${fetchRetryCount}/${maxFetchRetries} in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return tryFetchSW();
+              }
+              throw error;
             }
+          };
 
-            console.log('✅ Service worker file is accessible');
+          try {
+            await tryFetchSW();
           } catch (fetchError) {
             console.error('❌ Service worker file fetch failed:', fetchError);
-            throw fetchError;
+            setRegistrationError('Service worker file not found. Please check your deployment.');
+            return;
           }
           
           // Register service worker with retry
@@ -63,7 +83,7 @@ export default function ClientLayout({
               if (retryCount < maxRetries) {
                 retryCount++;
                 const delay = Math.pow(2, retryCount) * 1000;
-                console.log(`🔄 Retry ${retryCount}/${maxRetries} in ${delay}ms...`);
+                console.log(`🔄 Retry registration ${retryCount}/${maxRetries} in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return tryRegister();
               }
@@ -71,39 +91,44 @@ export default function ClientLayout({
             }
           };
 
-          const registration = await tryRegister();
-          setRegistration(registration);
-          setRegistrationError(null);
+          try {
+            const registration = await tryRegister();
+            setRegistration(registration);
+            setRegistrationError(null);
 
-          // Handle updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🔄 Update available, applying automatically...');
-                  // Automatically apply the update
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  window.location.reload();
-                }
-              });
-            }
-          });
-
-          // Listen for messages from the service worker
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
-              console.log('🔄 Update received:', event.data);
-              setBgColorVersion(event.data.data.bgColorVersion);
-            }
-          });
-
-          // Set up periodic update check
-          setInterval(() => {
-            registration.update().catch(error => {
-              console.error('❌ Update check failed:', error);
+            // Handle updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 Update available, applying automatically...');
+                    // Automatically apply the update
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    window.location.reload();
+                  }
+                });
+              }
             });
-          }, 30000); // Check every 30 seconds
+
+            // Listen for messages from the service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+              if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+                console.log('🔄 Update received:', event.data);
+                setBgColorVersion(event.data.data.bgColorVersion);
+              }
+            });
+
+            // Set up periodic update check
+            setInterval(() => {
+              registration.update().catch(error => {
+                console.error('❌ Update check failed:', error);
+              });
+            }, 30000); // Check every 30 seconds
+          } catch (error) {
+            console.error('❌ Service worker registration failed:', error);
+            setRegistrationError(error instanceof Error ? error.message : 'Registration failed');
+          }
         }
       } catch (error) {
         console.error('❌ Service worker registration failed:', error);

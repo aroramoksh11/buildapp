@@ -2,29 +2,27 @@
   "version": 2,
   "builds": [
     {
-      "src": "public/sw.js",
-      "use": "@vercel/static"
+      "src": "package.json",
+      "use": "@vercel/next"
     }
   ],
   "routes": [
     {
       "src": "/sw.js",
+      "dest": "/sw.js",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate",
-        "service-worker-allowed": "/"
-      },
-      "continue": true
+        "service-worker-allowed": "/",
+        "content-type": "application/javascript"
+      }
     },
     {
       "src": "/manifest.json",
+      "dest": "/manifest.json",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate",
         "content-type": "application/manifest+json"
-      },
-      "continue": true
-    },
-    {
-      "handle": "filesystem"
+      }
     },
     {
       "src": "/(.*)",
