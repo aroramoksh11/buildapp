@@ -10,35 +10,47 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      // Register service worker
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(
-          (registration) => {
-            console.log('ServiceWorker registration successful')
-
-            // Listen for messages from the service worker
-            navigator.serviceWorker.addEventListener('message', (event) => {
-              if (event.data && event.data.type === 'REFRESH_PAGE') {
-                window.location.reload()
+    const registerServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          console.log('🔄 Registering service worker...')
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          })
+          
+          if (registration.installing) {
+            console.log('📦 Service worker installing...')
+            registration.installing.addEventListener('statechange', () => {
+              if (registration.installing?.state === 'installed') {
+                console.log('✅ Service worker installed')
               }
             })
-          },
-          (err) => {
-            console.log('ServiceWorker registration failed: ', err)
+          } else if (registration.waiting) {
+            console.log('⏳ Service worker waiting...')
+          } else if (registration.active) {
+            console.log('✅ Service worker active')
           }
-        )
-      })
 
-      // Handle service worker updates
-      let refreshing = false
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true
-          window.location.reload()
+          // Check for updates every 2 minutes
+          setInterval(async () => {
+            try {
+              await registration.update()
+              console.log('🔄 Service worker update check completed')
+            } catch (error) {
+              console.error('❌ Service worker update check failed:', error)
+            }
+          }, 2 * 60 * 1000)
+
+        } catch (error) {
+          console.error('❌ Service worker registration failed:', error)
         }
-      })
+      } else {
+        console.log('❌ Service workers not supported')
+      }
     }
+
+    registerServiceWorker()
   }, [])
 
   return (
