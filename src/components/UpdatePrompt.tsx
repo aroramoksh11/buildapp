@@ -3,13 +3,22 @@
 import { useState, useEffect } from 'react'
 
 export default function UpdatePrompt() {
-  // Set initial state to true for testing
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(true)
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateProgress, setUpdateProgress] = useState(0)
+  const [lastUpdateTime, setLastUpdateTime] = useState<string | null>(null)
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
+      // Listen for messages from the service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+          console.log('Update available:', event.data)
+          setLastUpdateTime(event.data.data.timestamp)
+          handleAutomaticUpdate()
+        }
+      })
+
       // Check for updates every 5 minutes
       const checkForUpdates = async () => {
         try {
@@ -17,8 +26,6 @@ export default function UpdatePrompt() {
           if (registration) {
             console.log('Checking for updates...')
             await registration.update()
-            // Force show update prompt for testing
-            setShowUpdatePrompt(true)
           }
         } catch (error) {
           console.error('Error checking for updates:', error)
@@ -28,55 +35,68 @@ export default function UpdatePrompt() {
       // Initial check
       checkForUpdates()
 
-      // Set up periodic checks every 5 minutes (300000 ms)
+      // Set up periodic checks
       const interval = setInterval(checkForUpdates, 5 * 60 * 1000)
-
-      // Listen for update events
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('Service worker updated, showing prompt')
-        setShowUpdatePrompt(true)
-      })
 
       return () => clearInterval(interval)
     }
   }, [])
 
-  const handleUpdate = async () => {
+  const handleAutomaticUpdate = async () => {
+    // Save any important state to localStorage before update
+    const currentState = {
+      // Add any important state that needs to persist
+      lastUpdateCheck: new Date().toISOString(),
+      // Add other state as needed
+    }
+    localStorage.setItem('appState', JSON.stringify(currentState))
+
     setIsUpdating(true)
     setUpdateProgress(0)
-
-    // Simulate progress with completion
-    const progressInterval = setInterval(() => {
-      setUpdateProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval)
-          // Complete the update after reaching 100%
-          setTimeout(() => {
-            setIsUpdating(false)
-            setShowUpdatePrompt(false)
-            // Reload the page to apply updates
-            window.location.reload()
-          }, 500)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
 
     try {
       const registration = await navigator.serviceWorker.getRegistration()
       if (registration) {
+        // Start progress animation
+        const progressInterval = setInterval(() => {
+          setUpdateProgress((prev) => {
+            if (prev >= 100) {
+              clearInterval(progressInterval)
+              // Complete update after reaching 100%
+              setTimeout(() => {
+                setIsUpdating(false)
+                setShowUpdatePrompt(false)
+                // Reload the page to apply updates
+                window.location.reload()
+              }, 500)
+              return 100
+            }
+            return prev + 10
+          })
+        }, 200)
+
+        // Trigger the update
         await registration.update()
-        // Send message to service worker to refresh
         navigator.serviceWorker.controller?.postMessage({ type: 'REFRESH_PAGE' })
       }
     } catch (error) {
-      console.error('Error updating:', error)
+      console.error('Error during automatic update:', error)
       setIsUpdating(false)
       setUpdateProgress(0)
-      clearInterval(progressInterval)
     }
   }
+
+  // Restore state after page reload
+  useEffect(() => {
+    const savedState = localStorage.getItem('appState')
+    if (savedState) {
+      const state = JSON.parse(savedState)
+      // Restore any saved state
+      console.log('Restored state:', state)
+    }
+  }, [])
+
+  if (!showUpdatePrompt && !isUpdating) return null
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999]">
@@ -84,11 +104,18 @@ export default function UpdatePrompt() {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900">
-              ✨ New Update Available
+              {isUpdating ? '✨ Updating AutoDrive' : '✨ New Update Available'}
             </h3>
             <p className="mt-1 text-sm text-gray-600">
-              A new version of AutoDrive is ready to install.
+              {isUpdating
+                ? 'Please wait while we update your app...'
+                : 'A new version of AutoDrive is ready to install.'}
             </p>
+            {lastUpdateTime && (
+              <p className="mt-1 text-xs text-gray-500">
+                Last update: {new Date(lastUpdateTime).toLocaleString()}
+              </p>
+            )}
           </div>
           {!isUpdating && (
             <button
@@ -134,7 +161,7 @@ export default function UpdatePrompt() {
               Later
             </button>
             <button
-              onClick={handleUpdate}
+              onClick={handleAutomaticUpdate}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:from-pink-500 hover:via-pink-600 hover:to-pink-700 rounded-lg transition-colors shadow-sm"
             >
               Update Now
