@@ -39,3 +39,38 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Android build files
+.gradle/
+app/build/
+app/release/
+*.apk
+*.aab
+*.idsig
+*.keystore
+local.properties
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Generated files
+public/workbox-*.js
+!public/workbox-f52fd911.js
+
+# Logs
+*.log
+logcat.txt
+
+# Environment files
+.env*
+!.env.example
+
+# Build files
+build/
+dist/
+out/
+
+# OS files
+Thumbs.db
