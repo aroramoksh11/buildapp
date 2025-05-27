@@ -106,8 +106,16 @@ self.addEventListener('activate', (event) => {
           })
         );
 
-        // Claim clients
+        // Claim clients and update background color
         await self.clients.claim();
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'UPDATE_BACKGROUND',
+            version: 'blue-v1'
+          });
+        });
+        
         console.log('✅ Service worker activated and claimed clients');
       } catch (error) {
         console.error('❌ Activation failed:', error);
@@ -220,5 +228,15 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  } else if (event.data && event.data.type === 'UPDATE_BACKGROUND') {
+    // Broadcast background color update to all clients
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'UPDATE_BACKGROUND',
+          version: event.data.version || 'blue-v1'
+        });
+      });
+    });
   }
 });

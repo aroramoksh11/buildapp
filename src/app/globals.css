@@ -7,8 +7,22 @@
   --background-end: #f8fafc;
 }
 
+.bg-blue-gradient {
+  background: linear-gradient(to bottom, var(--background-start), var(--background-end));
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Ensure the gradient covers the entire viewport */
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background: linear-gradient(to bottom right, var(--background-start), var(--background-end));
+  background: linear-gradient(to bottom, var(--background-start), var(--background-end));
+  background-attachment: fixed;
   min-height: 100vh;
   color: #1e293b; /* slate-800 for better contrast */
   transition: background 0.5s ease-in-out;
@@ -45,12 +59,6 @@ body {
   background-color: #ffffff !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   transition: all 0.2s ease-in-out;
-}
-
-.bg-blue-gradient {
-  --background-start: #1e40af;
-  --background-end: #3b82f6;
-  color: white;
 }
 
 .bg-blue-gradient a {

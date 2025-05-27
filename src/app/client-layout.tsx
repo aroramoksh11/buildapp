@@ -180,6 +180,25 @@ export default function ClientLayout({
     }
   }, [bgColorVersion]);
 
+  // Set initial background color to blue
+  useEffect(() => {
+    setBgColorVersion('blue-v1');
+  }, []);
+
+  // Handle messages from service worker for background color updates
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'UPDATE_BACKGROUND') {
+        setBgColorVersion(event.data.version || 'blue-v1');
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
   return (
     <>
       {registrationError && (
@@ -192,7 +211,9 @@ export default function ClientLayout({
         </div>
       )}
       {!isInstalled && <InstallPrompt />}
-      {children}
+      <div className="min-h-screen bg-gradient-to-b from-[var(--background-start)] to-[var(--background-end)]">
+        {children}
+      </div>
     </>
   );
 } 
